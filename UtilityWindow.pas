@@ -54,6 +54,8 @@ uses
   SysUtils, Classes;
 
 {$IFDEF FPC}
+// wrapped may be slow, try different implementation
+
 const
   GWL_METHODCODE = SizeOf(pointer) * 0;
   GWL_METHODDATA = SizeOf(pointer) * 1;
@@ -64,7 +66,7 @@ var
   WndHandlerCritSect: TCriticalSection;
   WndHandlerCount:    Integer;
 
-  //------------------------------------------------------------------------------
+//------------------------------------------------------------------------------
 
 Function WndProcWrapper(Window: HWND; Message: UINT; wParam: WPARAM; lParam: LPARAM): LRESULT; stdcall;
 var
