@@ -2,7 +2,7 @@
 {                                                                              }
 {   Utility Window                                                             }
 {                                                                              }
-{   ©František Milt 2015-01-10                                                 }
+{   ©František Milt 2015-01-11                                                 }
 {                                                                              }
 {   Version 1.1                                                                }
 {                                                                              }
@@ -12,7 +12,7 @@ unit UtilityWindow;
 interface
 
 uses
-  Windows, Messages, MulticastEvent;
+  Windows, Messages,{$IFDEF FPC}SyncObjs,{$ENDIF} MulticastEvent;
 
 type
   TMessageEvent = procedure(var Msg: TMessage; var Handled: Boolean) of object;
@@ -51,52 +51,86 @@ type
 implementation
 
 uses
-  Classes, forms;
+  SysUtils, Classes;
 
 {$IFDEF FPC}
-var
-  UtilWindowClass: TWndClass = (
-    style:          0;
-    lpfnWndProc:    @DefWindowProc;
-    cbClsExtra:     0;
-    cbWndExtra:     0;
-    hInstance:      0;
-    hIcon:          0;
-    hCursor:        0;
-    hbrBackground:  0;
-    lpszMenuName:   nil;
-    lpszClassName:  'TUtilityWindow');
+const
+  GWL_METHODCODE = SizeOf(pointer) * 0;
+  GWL_METHODDATA = SizeOf(pointer) * 1;
 
-//------------------------------------------------------------------------------
+  UtilityWindowClassName = 'TUtilityWindow';
 
-Function AllocateHWnd(Method: TWndMethod): HWND;
 var
-  TempClass:      TWndClass;
-  ClassRegistered: Boolean;
+  WndHandlerCritSect: TCriticalSection;
+  WndHandlerCount:    Integer;
+
+  //------------------------------------------------------------------------------
+
+Function WndProcWrapper(Window: HWND; Message: UINT; wParam: WPARAM; lParam: LPARAM): LRESULT; stdcall;
+var
+  InstanceWndProc:  TMethod;
+  Msg:              TMessage;
 begin
-  UtilWindowClass.hInstance := hInstance;
-  UtilWindowClass.lpfnWndProc := @DefWindowProc;
-  ClassRegistered := GetClassInfo(HInstance,UtilWindowClass.lpszClassName,{%H-}TempClass);
-  If not ClassRegistered or (TempClass.lpfnWndProc <> @DefWindowProc) then
-    begin
-      If ClassRegistered then
-        Windows.UnregisterClass(UtilWindowClass.lpszClassName,hInstance);
-      Windows.RegisterClass(UtilWindowClass);
-    end;
-  Result := CreateWindowEx(WS_EX_TOOLWINDOW,UtilWindowClass.lpszClassName,'',WS_POPUP,0,0,0,0,0,0,hInstance,nil);
-  If Assigned(Method) then
-    SetWindowLongPtr(Result,GWL_WNDPROC,{%H-}LONG_PTR(MakeObjectInstance(Method)));
+InstanceWndProc.Code := {%H-}Pointer(GetWindowLongPtr(Window,GWL_METHODCODE));
+InstanceWndProc.Data := {%H-}Pointer(GetWindowLongPtr(Window,GWL_METHODDATA));
+If Assigned(TWndMethod(InstanceWndProc)) then
+  begin
+    Msg.msg := Message;
+    Msg.wParam := wParam;
+    Msg.lParam := lParam;
+    TWndMethod(InstanceWndProc)(Msg);
+    Result := Msg.Result
+  end
+else Result := DefWindowProc(Window,Message,wParam,lParam);
 end;
 
 //------------------------------------------------------------------------------
 
-procedure DeallocateHWnd(Wnd: HWND);
+Function UWAllocateHWND(Method: TWndMethod): HWND;
 var
-  Instance: Pointer;
+  Registered:         Boolean;
+  TempClass:          TWndClass;
+  UtilityWindowClass: TWndClass;
 begin
-  Instance := {%H-}Pointer(GetWindowLongPtr(Wnd,GWL_WNDPROC));
-  DestroyWindow(Wnd);
-  If Instance <> Pointer(@DefWindowProc) then FreeObjectInstance(Instance);
+Result := 0;
+ZeroMemory(@UtilityWindowClass,SizeOf(UtilityWindowClass));
+WndHandlerCritSect.Enter;
+try
+  Registered := Windows.GetClassInfo(hInstance,UtilityWindowClassName,{%H-}TempClass);
+  If not Registered or (TempClass.lpfnWndProc <> @WndProcWrapper) then
+    begin
+      If Registered then Windows.UnregisterClass(UtilityWindowClassName,hInstance);
+      UtilityWindowClass.lpszClassName := UtilityWindowClassName;
+      UtilityWindowClass.hInstance := hInstance;
+      UtilityWindowClass.lpfnWndProc := @WndProcWrapper;
+      UtilityWindowClass.cbWndExtra := SizeOf(TMethod);
+      If Windows.RegisterClass(UtilityWindowClass) = 0 then
+        raise Exception.CreateFmt('Unable to register hidden window class. %s',[SysErrorMessage(GetLastError)]);
+    end;
+  Result := CreateWindowEx(WS_EX_TOOLWINDOW,UtilityWindowClassName,'',WS_POPUP,0,0,0,0,0,0,hInstance,nil);
+  If Result = 0 then
+    raise Exception.CreateFmt('Unable to create hidden window. %s',[SysErrorMessage(GetLastError)]);
+  SetWindowLongPtr(Result,GWL_METHODDATA,{%H-}LONG_PTR(TMethod(Method).Data));
+  SetWindowLongPtr(Result,GWL_METHODCODE,{%H-}LONG_PTR(TMethod(Method).Code));
+  Inc(WndHandlerCount);
+finally
+  WndHandlerCritSect.Leave;
+end;
+end;
+
+//------------------------------------------------------------------------------
+
+procedure UWDeallocateHWND(Wnd: HWND);
+begin
+DestroyWindow(Wnd);
+WndHandlerCritSect.Enter;
+try
+  Dec(WndHandlerCount);
+  If WndHandlerCount <= 0 then
+    Windows.UnregisterClass(UtilityWindowClassName,hInstance);
+finally
+  WndHandlerCritSect.Leave;
+end;
 end;
 {$ENDIF}
 
@@ -163,7 +197,7 @@ begin
 inherited;
 fOnMessage := TMulticastMessageEvent.Create(Self);
 {$IFDEF FPC}
-fWindowHandle := AllocateHWND(@WndProc);
+fWindowHandle := UWAllocateHWND(@WndProc);
 {$ELSE}
 fWindowHandle := Classes.AllocateHWND(WndProc);
 {$ENDIF}
@@ -175,7 +209,7 @@ destructor TUtilityWindow.Destroy;
 begin
 fOnMessage.Clear;
 {$IFDEF FPC}
-DeallocateHWND(fWindowHandle);
+UWDeallocateHWND(fWindowHandle);
 {$ELSE}
 Classes.DeallocateHWND(fWindowHandle);
 {$ENDIF}
@@ -206,5 +240,13 @@ else
       end;
   end;
 end;
+
+{$IFDEF FPC}
+initialization
+  WndHandlerCritSect := TCriticalSection.Create;
+
+finalization
+  WndHandlerCritSect.Free;
+{$ENDIF}
 
 end.
