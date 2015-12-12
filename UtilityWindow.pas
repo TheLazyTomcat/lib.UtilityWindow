@@ -9,12 +9,16 @@
 {                                                                              }
 {   Utility Window                                                             }
 {                                                                              }
-{   ©František Milt 2015-02-20                                                 }
+{   ©František Milt 2015-12-13                                                 }
 {                                                                              }
-{   Version 1.2                                                                }
+{   Version 1.2.1                                                              }
 {                                                                              }
 {==============================================================================}
 unit UtilityWindow;
+
+{$IF not(defined(WINDOWS) or defined(MSWINDOWS))}
+  {$MESSAGE FATAL 'Unsupported operating system.'}
+{$IFEND}
 
 {$IFDEF FPC}{$MODE Delphi}{$ENDIF}
 
@@ -145,7 +149,7 @@ var
 begin
 If Synchronous then
   begin
-    while Integer(GetMessage({%H-}Msg,fWindowHandle,0,0)) <> 0 do
+    while GetMessage({%H-}Msg,fWindowHandle,0,0) do
       begin
         TranslateMessage(Msg);
         DispatchMessage(Msg);
@@ -153,7 +157,7 @@ If Synchronous then
   end
 else
   begin
-    while Integer(PeekMessage(Msg,fWindowHandle,0,0,PM_REMOVE)) <> 0 do
+    while PeekMessage(Msg,fWindowHandle,0,0,PM_REMOVE) do
       begin
         TranslateMessage(Msg);
         DispatchMessage(Msg);
