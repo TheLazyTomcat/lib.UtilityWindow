@@ -5,15 +5,19 @@
   file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 -------------------------------------------------------------------------------}
-{==============================================================================}
-{                                                                              }
-{   Utility Window                                                             }
-{                                                                              }
-{   ©František Milt 2015-12-13                                                 }
-{                                                                              }
-{   Version 1.2.1                                                              }
-{                                                                              }
-{==============================================================================}
+{===============================================================================
+
+  Utility Window
+
+  ©František Milt 2015-12-13
+
+  Version 1.2.1
+
+  Dependencies:
+    MulticastEvent - github.com/ncs-sniper/Lib.MulticastEvent
+    WndAlloc       - github.com/ncs-sniper/Lib.WndAlloc
+
+===============================================================================}
 unit UtilityWindow;
 
 {$IF not(defined(WINDOWS) or defined(MSWINDOWS))}
