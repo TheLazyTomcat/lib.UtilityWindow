@@ -14,6 +14,7 @@
   Version 1.2.1
 
   Dependencies:
+    AuxTypes       - github.com/ncs-sniper/Lib.AuxTypes
     MulticastEvent - github.com/ncs-sniper/Lib.MulticastEvent
     WndAlloc       - github.com/ncs-sniper/Lib.WndAlloc
 
