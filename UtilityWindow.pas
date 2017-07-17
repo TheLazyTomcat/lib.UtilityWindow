@@ -25,7 +25,11 @@ unit UtilityWindow;
   {$MESSAGE FATAL 'Unsupported operating system.'}
 {$IFEND}
 
-{$IFDEF FPC}{$MODE Delphi}{$ENDIF}
+{$IFDEF FPC}
+  {$MODE Delphi}
+{$ENDIF}
+
+{$TYPEINFO ON}
 
 interface
 
