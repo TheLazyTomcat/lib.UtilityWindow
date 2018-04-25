@@ -27,6 +27,7 @@ unit UtilityWindow;
 
 {$IFDEF FPC}
   {$MODE Delphi}
+  {$DEFINE FPC_DisableWarns}
 {$ENDIF}
 
 {$TYPEINFO ON}
@@ -74,6 +75,10 @@ implementation
 
 uses
   SysUtils, Classes, WndAlloc;
+
+{$IFDEF FPC_DisableWarns}
+  {$WARN 5057 OFF} // Local variable "$1" does not seem to be initialized
+{$ENDIF}
 
 {==============================================================================}
 {--- TMulticastMessageEvent implementation ------------------------------------}
@@ -158,7 +163,7 @@ var
 begin
 If Synchronous then
   begin
-    while GetMessage({%H-}Msg,fWindowHandle,0,0) do
+    while GetMessage(Msg,fWindowHandle,0,0) do
       begin
         TranslateMessage(Msg);
         DispatchMessage(Msg);
