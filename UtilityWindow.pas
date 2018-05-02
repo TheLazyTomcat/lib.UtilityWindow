@@ -15,6 +15,7 @@
 
   Dependencies:
     AuxTypes       - github.com/ncs-sniper/Lib.AuxTypes
+    AuxClasses     - github.com/ncs-sniper/Lib.AuxClasses
     MulticastEvent - github.com/ncs-sniper/Lib.MulticastEvent
     WndAlloc       - github.com/ncs-sniper/Lib.WndAlloc
 
@@ -35,7 +36,7 @@ unit UtilityWindow;
 interface
 
 uses
-  Windows, Messages, MulticastEvent;
+  Windows, Messages, AuxClasses, MulticastEvent;
 
 type
   TMessageEvent = procedure(var Msg: TMessage; var Handled: Boolean) of object;
@@ -56,7 +57,7 @@ type
 {--- TUtilityWindow declarationn ----------------------------------------------}
 {==============================================================================}
 
-  TUtilityWindow = class(TObject)
+  TUtilityWindow = class(TCustomObject)
   private
     fWindowHandle:  HWND;
     fOnMessage:     TMulticastMessageEvent;
