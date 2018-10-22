@@ -9,9 +9,9 @@
 
   Utility Window
 
-  ©František Milt 2015-12-13
+  ©František Milt 2018-10-22
 
-  Version 1.2.1
+  Version 1.2.2
 
   Dependencies:
     AuxTypes       - github.com/ncs-sniper/Lib.AuxTypes
@@ -31,8 +31,6 @@ unit UtilityWindow;
   {$DEFINE FPC_DisableWarns}
   {$MACRO ON}
 {$ENDIF}
-
-{$TYPEINFO ON}
 
 interface
 
@@ -68,7 +66,6 @@ type
     constructor Create;
     destructor Destroy; override;
     procedure ProcessMessages(Synchronous: Boolean = False); virtual;
-  published
     property WindowHandle: HWND read fWindowHandle;
     property OnMessage: TMulticastMessageEvent read fOnMessage;
   end;
