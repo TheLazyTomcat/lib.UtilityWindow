@@ -22,7 +22,7 @@
 
   Version 1.4 (2020-01-10)
 
-  Last change 2020-01-10
+  Last change 2020-08-02
 
   ©2015-2020 František Milt
 
@@ -62,6 +62,7 @@ unit UtilityWindow;
   {$DEFINE FPC_DisableWarns}
   {$MACRO ON}
 {$ENDIF}
+{$H+}
 
 interface
 
