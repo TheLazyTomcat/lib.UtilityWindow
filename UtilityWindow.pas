@@ -20,11 +20,11 @@
               ProcessMessages) in the same thread where you want to process
               the messages, otherwise it will not work!
 
-  Version 1.4 (2020-01-10)
+  Version 1.4.1 (2021-11-26)
 
-  Last change 2020-08-02
+  Last change 2021-11-26
 
-  ©2015-2020 František Milt
+  ©2015-2021 František Milt
 
   Contacts:
     František Milt: frantisek.milt@gmail.com
@@ -58,7 +58,8 @@ unit UtilityWindow;
 {$IFEND}
 
 {$IFDEF FPC}
-  {$MODE Delphi}
+  {$MODE ObjFPC}
+  {$MODESWITCH ClassicProcVars+}
   {$DEFINE FPC_DisableWarns}
   {$MACRO ON}
 {$ENDIF}
@@ -139,6 +140,7 @@ type
     fOnMessage:         TMulticastMessageEvent;
   protected
     procedure WndProc(var Msg: TMessage); virtual;
+    Function ProcessMessagesInternal(WaitForMessage: Boolean; out ReceivedQuitMessage: Boolean): Boolean; virtual;
   public
     constructor Create;
     destructor Destroy; override;
@@ -202,11 +204,6 @@ implementation
 
 uses
   WndAlloc;
-
-{$IFDEF FPC_DisableWarns}
-  {$DEFINE FPCDWM}
-  {$DEFINE W5036:={$WARN 5036 OFF}} // Local variable "$1" does not seem to be initialized
-{$ENDIF}
 
 {===============================================================================
 --------------------------------------------------------------------------------
@@ -304,37 +301,9 @@ If not Handled then
   Msg.Result := DefWindowProc(fWindowHandle,Msg.Msg,Msg.wParam,Msg.lParam);
 end;
 
-{-------------------------------------------------------------------------------
-    TUtilityWindow - public methods
--------------------------------------------------------------------------------}
-
-constructor TUtilityWindow.Create;
-begin
-inherited;
-fOnMessage := TMulticastMessageEvent.Create(Self);
-fWindowHandle := WndAlloc.AllocateHWND(WndProc);
-end;
-
 //------------------------------------------------------------------------------
 
-destructor TUtilityWindow.Destroy;
-begin
-WndAlloc.DeallocateHWND(fWindowHandle);
-fOnMessage.Free;
-inherited;
-end;
-
-//------------------------------------------------------------------------------
-
-procedure TUtilityWindow.BreakProcessing;
-begin
-fContinue := False;
-end;
-
-//------------------------------------------------------------------------------
-
-{$IFDEF FPCDWM}{$PUSH}W5036{$ENDIF}
-Function TUtilityWindow.ProcessMessages(WaitForMessage: Boolean; out ReceivedQuitMessage: Boolean): Boolean;
+Function TUtilityWindow.ProcessMessagesInternal(WaitForMessage: Boolean; out ReceivedQuitMessage: Boolean): Boolean;
 var
   Msg:    TMsg;
   GetRes: Integer;
@@ -358,13 +327,14 @@ begin
   that is, it was posted to the window, not sent. But, while the GetMessage is
   blocking, it can and will dispatch sent messages.
 
-  PeekMessage, when called, will dispatch sent messages, then retrieves posted
-  message, if any exists, and then returns. If there is no sent or queued
-  message, it returns immediately.
+  PeekMessage, when called, will dispatch all sent messages, then retrieves
+  posted message, if any exists, and then returns. If there is no sent or
+  queued message, it returns immediately.
 
   This means the thread cannot respond to sent messages unless it calls
   PeekMessage or is currently waiting on GetMessage.
 }
+FillChar(Addr(Msg)^,SizeOf(TMsg),0);
 ReceivedQuitMessage := False;
 fMessageProcessed := False;
 If fContinue then
@@ -397,7 +367,41 @@ If fContinue then
   end;
 Result := fMessageProcessed;
 end;
-{$IFDEF FPCDWM}{$POP}{$ENDIF}
+
+{-------------------------------------------------------------------------------
+    TUtilityWindow - public methods
+-------------------------------------------------------------------------------}
+
+constructor TUtilityWindow.Create;
+begin
+inherited;
+fOnMessage := TMulticastMessageEvent.Create(Self);
+fWindowHandle := WndAlloc.AllocateHWND(WndProc);
+end;
+
+//------------------------------------------------------------------------------
+
+destructor TUtilityWindow.Destroy;
+begin
+WndAlloc.DeallocateHWND(fWindowHandle);
+fOnMessage.Free;
+inherited;
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TUtilityWindow.BreakProcessing;
+begin
+fContinue := False;
+end;
+
+//------------------------------------------------------------------------------
+
+Function TUtilityWindow.ProcessMessages(WaitForMessage: Boolean; out ReceivedQuitMessage: Boolean): Boolean;
+begin
+fContinue := True;
+Result := ProcessMessagesInternal(WaitForMessage,ReceivedQuitMessage);
+end;
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
@@ -405,7 +409,8 @@ Function TUtilityWindow.ProcessMessages(WaitForMessage: Boolean = False): Boolea
 var
   QuitReceived: Boolean;
 begin
-Result := ProcessMessages(WaitForMessage,QuitReceived);
+fContinue := True;
+Result := ProcessMessagesInternal(WaitForMessage,QuitReceived);
 end;
 
 //------------------------------------------------------------------------------
@@ -415,7 +420,7 @@ var
   QuitReceived: Boolean;
 begin
 fContinue := True;
-while ProcessMessages(WaitForMessage,QuitReceived) do
+while ProcessMessagesInternal(WaitForMessage,QuitReceived) do
   If not fContinue or QuitReceived then Break{while...};
 end;
 
