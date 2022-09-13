@@ -22,9 +22,9 @@
 
   Version 1.4.1 (2021-11-26)
 
-  Last change 2021-11-26
+  Last change 2022-09-14
 
-  ©2015-2021 František Milt
+  ©2015-2022 František Milt
 
   Contacts:
     František Milt: frantisek.milt@gmail.com
@@ -133,12 +133,11 @@ type
 ===============================================================================}
 type
   TUtilityWindow = class(TCustomObject)
-  private
+  protected
     fWindowHandle:      HWND;
     fMessageProcessed:  Boolean;  // internal, do not publish
     fContinue:          Boolean;
     fOnMessage:         TMulticastMessageEvent;
-  protected
     procedure WndProc(var Msg: TMessage); virtual;
     Function ProcessMessagesInternal(WaitForMessage: Boolean; out ReceivedQuitMessage: Boolean): Boolean; virtual;
   public
